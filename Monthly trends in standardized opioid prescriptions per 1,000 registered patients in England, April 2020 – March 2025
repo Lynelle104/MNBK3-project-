@@ -1,0 +1,71 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+
+# Files
+all_path = "/Users/yi0zzz/Desktop/Research project/data/all opioids data without OST.xlsx"
+strong_path = "/Users/yi0zzz/Desktop/Research project/data/strong/strong_opioid_items_by_month.xlsx"
+other_path = "/Users/yi0zzz/Desktop/Research project/data/others/other_opioid_items_by_month.xlsx"
+
+# Read all files
+df_all = pd.read_excel(all_path, usecols=["date", "items"])
+df_all["date"] = pd.to_datetime(df_all["date"], origin="1899-12-30", unit="D")
+
+# Read the normal format of Strong & Other
+df_strong = pd.read_excel(strong_path, usecols=["date", "items"])
+df_strong["date"] = pd.to_datetime(df_strong["date"])
+
+df_other = pd.read_excel(other_path, usecols=["date", "items"])
+df_other["date"] = pd.to_datetime(df_other["date"])
+
+# standardized at the beginning of each month
+for df in [df_all, df_strong, df_other]:
+    df["date"] = df["date"].dt.to_period("M").dt.to_timestamp()
+
+full_dates = pd.date_range(start="2020-04-01", end="2025-03-01", freq="MS")
+
+# Complete the missing months for each group of data
+def align_df(df, name):
+    df = df.groupby("date")["items"].sum().reset_index()
+    df = df.set_index("date").reindex(full_dates, fill_value=0).reset_index()
+    df.columns = ["date", name]
+    return df
+
+df_all = align_df(df_all, "All")
+df_strong = align_df(df_strong, "Strong")
+df_other = align_df(df_other, "Other")
+
+# merge
+df_merged = df_all.merge(df_strong, on="date").merge(df_other, on="date")
+
+# draw
+plt.figure(figsize=(12, 6))
+plt.plot(df_merged["date"], df_merged["All"], label="All Opioids", marker="o", color="blue")
+plt.plot(df_merged["date"], df_merged["Strong"], label="Strong Opioids", marker="o", color="red")
+plt.plot(df_merged["date"], df_merged["Other"], label="Other Opioids", marker="o", color="green")
+
+plt.title("Monthly Opioid Prescription Items in England by Type")
+plt.ylim(500000, 2100000)  # 显示到 2100 位置
+plt.yticks([600000, 800000, 1000000, 1200000, 1400000, 1600000, 1800000, 2000000])  
+plt.xlabel("Month–Year")
+plt.ylabel("Number of Items Prescribed (per 1,000)")
+plt.xticks(rotation=45)
+plt.legend()
+plt.grid(True)
+plt.legend(
+    loc="center left",        
+    bbox_to_anchor=(1, 0.5)   
+)
+
+from matplotlib.ticker import FuncFormatter
+
+# Custom formatting function
+def thousands(x, pos):
+    return f"{int(x/1000):,}"
+
+plt.gca().yaxis.set_major_formatter(FuncFormatter(thousands))
+plt.tight_layout()
+
+plt.gca().xaxis.set_major_formatter(mdates.DateFormatter("%b'%y"))
+plt.gca().xaxis.set_major_locator(mdates.MonthLocator(interval=2))
+plt.show()
