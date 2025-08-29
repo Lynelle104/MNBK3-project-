@@ -1,0 +1,60 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+
+# Read the master data and area mapping
+df_value = pd.read_excel(
+    r'/Users/yi0zzz/Desktop/Research project/data/data on Opioid analgesics by Sub-ICB Location./1Standardized_Items_per_Patient_in_2024.xlsx'
+)
+df_mapping = pd.read_excel(
+   r'/Users/yi0zzz/Desktop/Research project/data/data on Opioid analgesics by Sub-ICB Location./1Sub-ICB_to_NHS_Region_Mapping_FULLY_ENRICHED.xlsx'
+)
+
+# Clean and merge
+df_value['org_name'] = df_value['org_name'].str.upper().str.strip()
+df_mapping['org_name'] = df_mapping['org_name'].str.upper().str.strip()
+df = df_value.merge(df_mapping, on='org_name', how='left')
+
+# Regional color matching
+region_colors = {
+    "NORTH EAST AND YORKSHIRE COMMISSIONING REGION": "#1f77b4",
+    "NORTH WEST COMMISSIONING REGION": "#ff7f0e",
+    "MIDLANDS COMMISSIONING REGION": "#2ca02c",
+    "EAST OF ENGLAND COMMISSIONING REGION": "#d62728",
+    "LONDON COMMISSIONING REGION": "#9467bd",
+    "SOUTH EAST COMMISSIONING REGION": "#8c564b",
+    "SOUTH WEST COMMISSIONING REGION": "#e377c2",
+}
+df['color'] = df['_region'].map(region_colors)
+
+# sorting and draw
+df_sorted = df.sort_values(by='standardized_items', ascending=True)
+df_sorted['color'] = df_sorted['_region'].map(region_colors)
+plt.figure(figsize=(14, 30))
+plt.barh(
+    df_sorted['org_name'],
+    df_sorted['standardized_items'],
+    color=df_sorted['color']
+)
+
+plt.xlabel('Number of Opioid Prescription Items per 1,000 registered patients(2024)', fontsize=12)
+plt.ylabel('NHS Sub-ICB Region', fontsize=12)
+plt.title('All Opioid Items Prescribed per 1,000 registered patients in NHS Regions (2024)', fontsize=14)
+plt.yticks(fontsize=8)
+
+handles = [
+    mpatches.Patch(color=color, label=region.replace(" COMMISSIONING REGION", ""))
+    for region, color in region_colors.items()
+]
+plt.legend(
+    handles=handles,
+    title="NHS Region",
+    loc='lower right',          
+    bbox_to_anchor=(0.98, 0.02), 
+    fontsize=10,
+    title_fontsize=11,
+    frameon=True               
+)
+
+plt.tight_layout()
+plt.show()
