@@ -1,0 +1,42 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Read data
+imd = pd.read_csv("/Users/yi0zzz/Desktop/Research project/data/IMD in different regions/IMD 2019 File 7.csv")
+lsoa_la = pd.read_csv("/Users/yi0zzz/Desktop/Research project/data/IMD in different regions/LSOA_(2011)_to_LSOA_(2021)_to_Local_Authority_District_(2022)_Best_Fit_Lookup_for_EW_(V2).csv")
+la_nhs = pd.read_csv("/Users/yi0zzz/Desktop/Research project/data/IMD in different regions/local_authority_nhs_region.csv"
+# LSOA → LA
+imd = imd.merge(lsoa_la[['LSOA11CD', 'LAD22CD']], 
+                left_on='LSOA code (2011)', right_on='LSOA11CD', how='left')
+# LA → NHS Region
+imd = imd.merge(la_nhs[['la_gss', 'nhs_name']], left_on='LAD22CD', right_on='la_gss', how='left')
+# Check if there are any NHS areas that don't match
+print(f"The number of unmatched NHS areas：{imd['nhs_name'].isna().sum()}")
+# Summarize the median IMD score of each NHS district + the number of LSOAs + the proportion of the poorest 10%
+imd_summary = imd.groupby('nhs_name').agg(
+    mean_imd_score=('Index of Multiple Deprivation (IMD) Score', 'mean'),
+    total_lsoa=('LSOA code (2011)', 'count'),
+    pct_most_deprived_10=('Index of Multiple Deprivation (IMD) Decile (where 1 is most deprived 10% of LSOAs)',
+                          lambda x: (x == 1).sum() / len(x) * 100)
+).reset_index()
+# mean_imd_score pic
+plt.figure(figsize=(10, 6))
+sns.barplot(data=imd_summary.sort_values('mean_imd_score', ascending=False),
+            x='mean_imd_score', y='nhs_name', dodge=False, palette='coolwarm', legend=False)
+plt.xlabel("Mean IMD Score")
+plt.ylabel("NHS Region")
+plt.title("IMD 2019 – Mean Deprivation Score by NHS Region")
+plt.tight_layout()
+plt.show()
+
+
+# Proportion of Most Deprived 10% LSOAs in England
+plt.figure(figsize=(10, 6))
+sns.barplot(data=imd_summary.sort_values('pct_most_deprived_10', ascending=False),
+            x='pct_most_deprived_10', y='nhs_name', dodge=False, palette='Blues_d', legend=False)
+plt.xlabel("Percentage of LSOAs in the Most Deprived 10%")
+plt.ylabel("NHS Region")
+plt.title("IMD 2019 – Proportion of Most Deprived 10% LSOAs by NHS Region")
+plt.tight_layout()
+plt.show()
