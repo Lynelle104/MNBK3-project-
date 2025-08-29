@@ -1,0 +1,44 @@
+import pandas as pd
+import geopandas as gpd
+import matplotlib.pyplot as plt
+
+# Read map and data file
+gdf = gpd.read_file("/Users/yi0zzz/Desktop/Research project/data/IMD in different regions/SICBL_JUL_2022_EN_BGC_-6900682982880756170") 
+df = pd.read_csv("/Users/yi0zzz/Desktop/Research project/data/IMD in different regions/E code.csv")
+new_data = pd.read_excel("/Users/yi0zzz/Desktop/Research project/data/data on Opioid analgesics by Sub-ICB Location./all opioids without OST barchart table.xlsx")
+
+# standardize form
+gdf.columns = gdf.columns.str.lower()
+df.columns = df.columns.str.lower()
+gdf["sicbl22cd"] = gdf["sicbl22cd"].astype(str)
+df["sicbl22cd"] = df["sicbl22cd"].astype(str)
+
+# Clean org_name
+df["org_name"] = df["org_name"].str.strip().str.upper()
+new_data["org_name"] = new_data["org_name"].str.strip().str.upper()
+
+# Merge the new data and E-code
+merged_data = pd.merge(new_data, df[["org_name", "sicbl22cd"]], on="org_name", how="left")
+merged_data = merged_data.rename(columns={"standardized_items": "standardized_items"})
+
+# Merge maps and data
+merged = gdf.merge(merged_data[["sicbl22cd", "standardized_items"]], on="sicbl22cd", how="left")
+
+# draw
+fig, ax = plt.subplots(figsize=(8, 10))  
+merged.plot(
+    column="standardized_items",
+    cmap="OrRd",
+    linewidth=0.5,
+    edgecolor="black",
+    ax=ax,
+    legend=True,
+      vmin=100,          
+    vmax=800, 
+    legend_kwds={"shrink": 0.4, "aspect": 30, "pad": 0.01},
+    missing_kwds={"color": "#f0f0f0", "label": "No data"}
+)
+
+ax.axis("off")
+plt.tight_layout()
+plt.show()
